@@ -69,7 +69,7 @@ def main(base_url):
         # https://example.com/my-extension/index.json
         extension_info_url = '/'.join([base_url, repo_name, 'index.json'])
         extension = dict(
-            identifier=ext['id'],
+            identifier=ext['id'].replace("org.","com."),
             name=ext['name'],
             content_type=ext['content_type'],
             area=ext.get('area', None),
