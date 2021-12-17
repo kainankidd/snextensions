@@ -77,7 +77,6 @@ def main(base_url):
             description=ext.get('description', None),
             marketing_url=ext.get('marketing_url', None),
             thumbnail_url=ext.get('thumbnail_url', None),
-            valid_until='2030-05-16T18:35:33.000Z',
             url=extension_url,
             download_url='https://github.com/{github}/archive/{version}.zip'.format(**ext),
             latest_url=extension_info_url,
@@ -86,10 +85,6 @@ def main(base_url):
             layerable=ext.get('layerable', None),
             deletion_warning=ext.get('deletion_warning', None),
         )
-
-        # mfa-link (2FA manager) has no expiration
-        if ext.get('no_expire', False):
-            extension.pop('valid_until', None)
 
         # Strip empty values
         extension = {k: v for k, v in extension.items() if v}
@@ -120,7 +115,6 @@ def main(base_url):
         json.dump(
             dict(
                 content_type='SN|Repo',
-                valid_until='2030-05-16T18:35:33.000Z',
                 packages=extensions,
             ),
             wf,
