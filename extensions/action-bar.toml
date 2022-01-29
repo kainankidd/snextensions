@@ -1,4 +1,4 @@
-id = "org.standardnotes.action-bar"
+id = "orgg.standardnotes.action-bar"
 npm = "sn-action-bar"
 github = "sn-extensions/action-bar"
 main = "index.html"
