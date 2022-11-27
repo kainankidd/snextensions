@@ -1,65 +1,163 @@
-# snextensions
+![Standard Notes Extension Repository](../assets/standardnotes.png?raw=true)
 
-[![Netlify Status](https://api.netlify.com/api/v1/badges/53e5f0b7-02c9-400d-8590-159860892cdc/deploy-status)](https://app.netlify.com/sites/snext/deploys)
+## Standard Notes Extensions - Self-Hosted Repository
+Host Standard Notes extensions on your own server. This utility parses most of the open-source extensions available from the Standard Notes team as well as a range of extensions created by the wider Standard Notes community to build an extensions repository which can then be plugged directly into Standard Notes Web/Desktop Clients. (https://standardnotes.org/)
 
-A set of open source extensions for StandardNotes.
+Extensions are listed as `YAML` in the `/extensions` sub-directory, pull a request if you'd like to add yours.
 
-# Usage
+### Requirements
+* Python 3
+	* pyyaml module
+	* requests module
 
-Paste `https://snext.netlify.app/index.json` into `Extended Code` in StandardNotes.
+### Demo
+<p align="center">
+	<img alt="Standard Notes Extension Repository Demo" src="https://github.com/iganeshk/standardnotes-extensions/raw/assets/standardnotes_demo.gif" width="80%" />
+</p>
 
-# Notice
+### Usage
 
-Previously (last year) the URL was `https://snext.netlify.com/index.json`.
-But early this year Netlify decided to change the domain used by hosted apps.
+* Clone this repository to your web-server:
+```bash
+$ git clone https://github.com/iganeshk/standardnotes-extensions.git
+$ cd standardnotes-extensions
+$ pip3 install -r requirements.txt
+```
+* Visit the following link to generate a personal access token:
+```
+$ https://github.com/settings/tokens
+```
+![Github Personal Access Token](../assets/github_personal_token.png?raw=true)
 
-If you've been experiencing empty editor UI, there's a chance that you're using
-the old URL. Netlify is taking care of redirections but they are missing some
-headers. You should migrate to the new URL.
+* Use the provided [`env.sample`](../env.sample) to create a `.env` file for your environment variables and including your Github personal access token.
 
-These steps are required to migrate:
+```
+# Sample ENV setup Variables (YAML)
+# Copy this file and update as needed.
+#
+#   $ cp env.sample .env
+#
+# Do not include this new file in source control
+# Github Credentials
+# Generate your token here: https://github.com/settings/tokens
+# No additional permission required, this is just to avoid github api rate limits
+#
 
-- Look for the "Repository" options in the "Extensions" menu (on the bottom)
-- Delete the repository
-- Uninstall all installed themes and editors
-- Re-enter the new URL into `Extended Code`
-- Re-install all the themes and editors you use
+domain: https://your-domain.com/extensions
 
-# Contribution
+github:
+  username: USERNAME
+  token: TOKEN
 
-If you'd like an extension to be included in this repository, feel free to open an issue.
+```
 
-# Self-hosting
+* [Optional] Add more extensions to the `/extensions` directory, using the `YAML` sample templates for [extensions](../extension.yaml.sample) or [themes](../theme.yaml.sample), or modify any existing extensions.
+* Run the utility:
 
-## With Netlify
+```bash
+$ python3 build_repo.py
+```
+* Serve the `/public` directory and verify that the endpoint is reachable.
 
-In case if you'd like to host your own site other than using ours, you can do so with Netlify:
+```
+https://your-domain.com/extensions/index.json
+```
+* Import the `latest url` for each extension you want to add (for example: `https://your-domaim.com/extensions/bold-editor/index.json`) into the Standard Notes Web Desktop client under the `General` > `Advanced Settings` > `Install Custom Extension` menu. (Note: Enable CORS for your web server respectively, nginx setup provided below)
 
-- Fork this repository;
-- Create a Netlify account if you don't have one already;
-- In Netlify app, Use "New site from Git" to create a site from your forked GitHub repository;
-- Wait for the build to finish;
-- After that you can use `YOUR_SITE_URL/index.json` as an `Extended Code`;
-- Optionally you can set a human-readable site name (a subdomain of `netlify.app`) from the `Site settings` page.
-  **Notice: You need to manually trigger a new deploy via Netlify web UI after changing the site name.**
+* If you are self-hosting Standard Notes Server (aka [Standard Notes Standalone](https://github.com/standardnotes/standalone)), you may need to add a "subscription" to your self-hosted user account in order to avoid any problems accessing official Standard Notes extensions. 
+* To add a subscription to your self-hosted user account, run the following commands (Replace EMAIL@ADDR with your user email) from within your standalone directory:
+`./server.sh create-subscription EMAIL@ADDR`
 
-## Without Netlify
+### Docker
 
-It's easy and recommended to host with Netlify. However if you insist not to use it, it is also possible (notice: the following steps work on Linux or WSL):
+* To run via Docker, clone this repository, create your `.env` file using the provided `env.sample`, and optionally add any additional extensions to the `/extensions` directory, following the instructions above.
+* Then pull and run the container, specifying the mount points for the `.env` file, the `extensions` directory, and the `public` directory, where the self-hosted extensions will be placed:
 
-- Prepare your environment with `Python 3.7` with `pip`, as well as `Git`;
-- Make sure Python 3.7 can be called directly via `python` from the shell;
-- Make sure Git is installed and can be called directly via `git` from the shell;
-- `pip install -r requirements.txt` to install required Python libraries;
-- Run the build script `URL=my_url python build.py` where `my_url` is the full URL you would later host the resource files on. E.g. if you want to access the plugins via `https://example.com/index.json` then replace `my_url` with `https://example.com/`.
-- Verify that:
-  - the `public` directory is generated;
-  - there should be `public/index.json` containing information of all extensions;
-  - all extensions should exists in `public` as sub-directories;
-- Host the `public` directory like you would do with any static resources, using nginx, caddy, etc.
-- You need to enable CORS headers on your reverse proxy (nginx / caddy / traefik). With nginx these rules will be enough:
-  ```nginx
-  add_header 'Access-Control-Allow-Origin' '*';
-  add_header 'Access-Control-Allow-Headers' 'content-type';
-  ```
+```bash
+$ docker run \
+  -v $PWD/.env:/build/.env \
+  -v $PWD/extensions:/build/extensions \
+  -v $PWD/public:/build/public \
+  -v $PWD/standardnotes-extensions-list.txt:/build/standardnotes-extensions-list.txt \
+  iganesh/standardnotes-extensions
+```
 
+#### Docker Compose
+
+If you would like to use the container with docker-compose, the exact setup will be somewhat specific to your configuration, however the following snippet may be helpful, assuming you have cloned this repository in your `$HOME` directory and followed the instructions regarding the `.env` file and `/extensions` directory:
+
+```yaml
+version: '3.3'
+services:
+  nginx:
+  ...
+    volumes:
+    - standardnotes-extensions:/usr/share/nginx/html
+
+  standardnotes-extensions:
+    image: iganesh/standardnotes-extensions
+    restart: "no"
+    volumes:
+      - $HOME/standardnotes-extensions/.env:/build/.env
+      - $HOME/standardnotes-extensions/extensions:/build/extensions
+      - $HOME/standardnotes-extensions/standardnotes-extensions-list.txt:/build/standardnotes-extensions-list.txt
+      - standardnotes-extensions:/build/public
+
+volumes:
+  standardnotes-extensions:
+    name: standardnotes-extensions
+```
+
+This snippet will handle the building of the extension creation-container, and place the result in the `standardnotes-extensions` volume, which can then be mounted in the nginx container so that it can be served as demonstrated in the instructions below. Note that it's necessary to include the `restart: "no"` flag, because the container is designed to stop after it has finished generating the extensions.
+
+Also, please note that the configuration snippet above is in no way a complete setup: you will still have to configure the nginx container and set up the syncing server containers.
+
+### Docker Build
+
+If you need to build the container, clone this repository, `cd` into it, and run the following command:
+
+```bash
+$ docker build --no-cache -t standardnotes-extensions:local .
+```
+
+### Setup with nginx
+
+```nginx
+	location ^~ /extensions {
+		autoindex off;
+		alias /path/to/standardnotes-extensions/public;
+		# CORS HEADERS
+		if ($request_method = 'OPTIONS') {
+		   add_header 'Access-Control-Allow-Origin' '*';
+		   add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+		   #
+		   # Custom headers and headers various browsers *should* be OK with but aren't
+		   #
+		   add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,X-Application-Version,X-SNJS-Version';
+		   #
+		   # Tell client that this pre-flight info is valid for 20 days
+		   #
+		   add_header 'Access-Control-Max-Age' 1728000;
+		   add_header 'Content-Type' 'text/plain; charset=utf-8';
+		   add_header 'Content-Length' 0;
+		   return 204;
+		}
+		if ($request_method = 'POST') {
+		   add_header 'Access-Control-Allow-Origin' '*';
+		   add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+		   add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,X-Application-Version,X-SNJS-Version';
+		   add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range';
+		}
+		if ($request_method = 'GET') {
+		   add_header 'Access-Control-Allow-Origin' '*';
+		   add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+		   add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,X-Application-Version,X-SNJS-Version';
+		   add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range';
+		}
+	}
+```
+
+### Acknowledgments
+* This project was adapted originally from https://github.com/JokerQyou/snextensions
+* Check out https://github.com/jonhadfield/awesome-standard-notes for more Standard Notes stuff!
+* Authors of custom themes and extensions
